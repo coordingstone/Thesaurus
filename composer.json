@@ -1,0 +1,10 @@
+{
+    "name": "joelsvensson/synonyms",
+    "type": "project",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Src\\": "src/"
+        }
+    }
+}
