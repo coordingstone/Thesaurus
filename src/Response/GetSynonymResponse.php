@@ -1,12 +1,26 @@
 <?php
+namespace Thesaurus\Response;
 
-namespace Src\Response;
+class GetSynonymResponse
+{
 
-class GetSynonymResponse {
-    public $searchWord;
-    public $synonyms;
+    /**
+     * @var string
+     */
+    public string $searchWord;
 
-    public static function createModel($searchWord, $synonyms) {
+    /**
+     * @var array
+     */
+    public array $synonyms;
+
+    /**
+     * @param string $searchWord
+     * @param array $synonyms
+     * @return GetSynonymResponse
+     */
+    public static function createModel(string $searchWord, array $synonyms)
+    {
         $obj = new self();
         $obj->searchWord = $searchWord;
         

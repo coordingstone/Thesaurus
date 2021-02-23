@@ -1,36 +1,35 @@
 <?php
-
-namespace Src\Database;
+namespace Thesaurus\Database;
 
 use Exception;
 use mysqli;
 use PDO;
-use PDOException;
 
 class Db
 {
-    /** @var mysqli */
+
+    /** @var mysqli|PDO */
     private $connection;
 
     /**
-     * Try to establish connection to db
+     * @param PDO $pdo
      * @throws Exception
      */
-    public function __construct($host, $dbName, $user, $password, $port)
+    public function __construct(PDO $pdo)
     {
-        try {
-            $pdo = new PDO("mysql:host=" . $host . ";dbname=" . $dbName . ";port=" . $port, $user, $password);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
-            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-
-            $this->connection = $pdo;
-        } catch (PDOException $e) {
-            throw new Exception('Connection failed: ' . $e->getMessage());
-        }
+        $this->connection = $pdo;
     }
 
-    public function getConnection() {
+    /**
+     * @return mysqli|PDO
+     */
+    public function getConnection()
+    {
         return $this->connection;
     }
+
+
 }

@@ -1,16 +1,20 @@
 <?php
+namespace Thesaurus\Database;
 
-namespace Src\Database;
-
-use Src\Database\Db;
+use mysqli_result;
+use mysqli_stmt;
 use PDOException;
 use Exception;
 use PDO;
-use Src\Datamodels\Word;
+use PDOStatement;
 
 class DbStatementHelper
 {
-    private $db;
+
+    /**
+     * @var Db
+     */
+    private Db $db;
 
     public function __construct(Db $db)
     {
@@ -18,25 +22,12 @@ class DbStatementHelper
     }
 
     /**
-     * @param  String $query
-     * @return Object
+     * @param string $query
+     * @return bool|false|mysqli_result|PDOStatement
      * @throws Exception
      */
-    public function query($query)
+    public function selectAll(string $query)
     {
-        try {
-            $statement = $this->db->getConnection()->prepare($query);
-            if ($statement->execute()) {
-
-            }
-            
-            return $statement;
-        } catch (PDOException $e) {
-            throw new Exception('Query failed: ' . $e->getMessage());
-        }
-    }
-
-    public function selectAll($query) {
         try {
             return $statement = $this->db->getConnection()->query($query);
         } catch (PDOException $e) {
@@ -44,7 +35,14 @@ class DbStatementHelper
         }
     }
 
-    public function selectAllByParams($query, $params) {
+    /**
+     * @param string $query
+     * @param array $params
+     * @return bool|false|mysqli_stmt|PDOStatement
+     * @throws Exception
+     */
+    public function selectAllByParams(string $query, array $params)
+    {
         try {
             $statement = $this->db->getConnection()->prepare($query);
             $statement->execute($params);
@@ -54,7 +52,15 @@ class DbStatementHelper
         }
     }
 
-    public function insert($query, $params, $returnObjectId = false) {
+    /**
+     * @param string $query
+     * @param array $params
+     * @param bool $returnObjectId
+     * @return bool|string
+     * @throws Exception
+     */
+    public function insert(string $query, array $params, bool $returnObjectId = false)
+    {
         try {
             if ($returnObjectId) {
                 $statement = $this->db->getConnection()->prepare($query);
@@ -69,7 +75,14 @@ class DbStatementHelper
         }
     }
 
-    public function selectByValue($query, $value) {
+    /**
+     * @param string $query
+     * @param string $value
+     * @return bool|mixed
+     * @throws Exception
+     */
+    public function selectByValue(string $query, string $value)
+    {
         try {
             $statement = $this->db->getConnection()->prepare($query);
             $statement->bindParam(':value', $value, PDO::PARAM_STR);
@@ -80,7 +93,14 @@ class DbStatementHelper
         }
     }
 
-    public function selectById($query, $id) {
+    /**
+     * @param string $query
+     * @param int $id
+     * @return bool|mixed
+     * @throws Exception
+     */
+    public function selectById(string $query, int $id)
+    {
         try {
             $statement = $this->db->getConnection()->prepare($query);
             $statement->bindParam(':id', $id, PDO::PARAM_INT);

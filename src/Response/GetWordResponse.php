@@ -1,14 +1,22 @@
 <?php
+namespace Thesaurus\Response;
 
-namespace Src\Response;
+use Thesaurus\Datamodels\WordWithoutId;
 
-use Src\Response\WordResponse;
+class GetWordResponse
+{
 
-class GetWordResponse {
-        
+    /**
+     * @var WordWithoutId|array
+     */
     public $words;
 
-    public static function createModel($words) {
+    /**
+     * @param WordWithoutId|array $words
+     * @return GetWordResponse
+     */
+    public static function createModel(array $words)
+    {
         $obj = new self();
         $wordResponseModels = array();
         foreach ($words as $word) {

@@ -1,28 +1,31 @@
 <?php
-
-namespace Src\Controllers;
+namespace Thesaurus\Controllers;
 
 use Exception;
-use Src\Dao\SynonymsDao;
-use Src\Interfaces\Thesaurus;
-use Src\Requests\AddWordRequest;
-use Src\Requests\GetWordRequest;
-use Src\Response\GetSynonymResponse;
-use Src\Response\GetWordResponse;
+use Thesaurus\Requests\AddWordRequest;
+use Thesaurus\Response\GetSynonymResponse;
+use Thesaurus\Response\GetWordResponse;
+use Thesaurus\Service\SynonymsService;
 
-class SynonymsController implements Thesaurus {
+class SynonymsController
+{
 
-    private $synonymsDao;
+    /** @var SynonymsService */
+    private SynonymsService $synonymsService;
 
-    public function __construct() 
+    public function __construct(SynonymsService $synonymsService)
     {
-        $this->synonymsDao = new SynonymsDao();
+        $this->synonymsService = $synonymsService;
     }
 
-    public function getWords() 
+    /**
+     * Get all words in the thesaurus
+     * @return false|string
+     */
+    public function getWords()
     {
         try {
-            $words = $this->synonymsDao->getWords();
+            $words = $this->synonymsService->getWords();
             $response = GetWordResponse::createModel($words);
 
             return json_encode($response);
@@ -30,137 +33,77 @@ class SynonymsController implements Thesaurus {
             http_response_code(500);
             echo json_encode('Something went wrong');
         }
-               
     }
 
-    public function getSynonyms($request) 
+    /**
+     * Get all synonyms for word in request
+     *
+     * @param string $word
+     * @return false|string
+     * @throws Exception
+     */
+    public function getSynonyms(string $word)
     {
-        $getWordRequest = GetWordRequest::withRequest(json_decode($request));
+        if (empty($word)) {
+            http_response_code(400);
+            echo json_encode('Bad request');
+            die();
+        }
 
-        $errorMessage = $this->validateWordRequest($getWordRequest);
+        $word = strtolower(filter_var($word, FILTER_SANITIZE_STRING));
+
+        $errorMessage = $this->validateWord($word);
         if (!empty($errorMessage)) {
-            return $errorMessage;
+            http_response_code(400);
+            return json_encode($errorMessage);
         }
 
-        $found = $this->synonymsDao->getWordByValue($getWordRequest->word);
-        if (!$found) {
-            $foundSynonym = $this->synonymsDao->getSynonymByValue($getWordRequest->word);
-            if (!$foundSynonym) {
-                return "No synonyms found";
-            }
-
-            $allSynonyms = $this->synonymsDao->getAllSynonymsByWordId($foundSynonym->wordId);
-            if (!empty($allSynonyms)) {
-                $word = $this->synonymsDao->getWordById($allSynonyms[0]->wordId);
-                $allSynonyms[] = $word;
-                $synonyms = array();
-                foreach ($allSynonyms as $synonym) {
-                    if ($synonym->value !== $foundSynonym->value) {
-                        $synonyms[] = $synonym;
-                    }
-                }
-                $response = GetSynonymResponse::createModel($foundSynonym->value, $synonyms);
-                return json_encode($response);
-            }
-            
-            $response = GetSynonymResponse::createModel($foundSynonym->value, $allSynonyms);
-            return json_encode($response);
-            
-        }
-
-        $allSynonyms = $this->synonymsDao->getAllSynonymsByWordId($found->id);
-        $response = GetSynonymResponse::createModel($found->value, $allSynonyms);
+        list($value, $synonyms) = $this->synonymsService->getSynonyms($word);
+        $response = GetSynonymResponse::createModel($value, $synonyms);
         return json_encode($response);
     }
 
-    private function validateWordRequest($request) {
+    /**
+     * @param string $word
+     * @return string
+     */
+    private function validateWord(string $word)
+    {
         $errorMessage = array();
 
-        if ($request->word == '') {
+        if ($word == '') {
             $errorMessage[] = 'Word missing';
         }
 
-        preg_match('/[^a-zA-Z]/', $request->word) == true ? $errorMessage[] = 'Word contains non letters' : null;
+        preg_match('/[^a-z]/', $word) == true ? $errorMessage[] = 'Word contains non letters or uppercase' : null;
 
         return implode('. ', $errorMessage);
     }
 
-    public function addSynonyms($request) 
+    /**
+     * Add synonyms to thesaurus if it not exists
+     *
+     * @param false|string $request
+     * @return string
+     * @throws Exception
+     */
+    public function addSynonyms($request)
     {
         $addWordRequest = AddWordRequest::withRequest(json_decode($request));
-
-        $errorMessage = $this->validateRequest($addWordRequest);
-        if (!empty($errorMessage)) {
-            return $errorMessage;
+        if (empty($addWordRequest->words)) {
+            return "Empty list of words";
         }
-
-        $wordWithSynonymArray = $this->synonymsDao->wordHasSynonym($addWordRequest->firstWord, $addWordRequest->secondWord);
-
-        if (count($wordWithSynonymArray) == 2) {
-            return "First word is already added as a synonym to second word";
-        } else if (count($wordWithSynonymArray) == 1) {
-            if ($wordWithSynonymArray[0]->fromTable == 'word') {
-                if ($wordWithSynonymArray[0]->value === $addWordRequest->firstWord) {
-                    // insert second word to synonyms
-                    if (!$this->synonymsDao->insertSynonym($addWordRequest->secondWord, $wordWithSynonymArray[0]->id)) {
-                        return 'Failed to insert synonym for ' . $addWordRequest->secondWord;
-                    }
-                    return 'Inserted synonym for ' . $addWordRequest->secondWord;
-                } else {
-                    // insert first word to synonyms
-                    if (!$this->synonymsDao->insertSynonym($addWordRequest->firstWord, $wordWithSynonymArray[0]->id)) {
-                        return 'Failed to insert synonym for ' . $addWordRequest->firstWord;
-                    }
-                    return 'Inserted synonym for ' . $addWordRequest->firstWord;
-                }
-            } else {
-                if ($wordWithSynonymArray[0]->value === $addWordRequest->firstWord) {
-                    // insert second word to synonym
-                    if (!$this->synonymsDao->insertSynonym($addWordRequest->secondWord, $wordWithSynonymArray[0]->id)) {
-                        return 'Failed to insert synonym for ' . $addWordRequest->secondWord;
-                    }
-                    return 'Inserted synonym for ' . $addWordRequest->secondWord;
-                } else {
-                    // insert first word to synonym
-                    if (!$this->synonymsDao->insertSynonym($addWordRequest->firstWord, $wordWithSynonymArray[0]->id)) {
-                        return 'Failed to insert synonym for ' . $addWordRequest->firstWord;
-                    }
-                    return 'Inserted synonym for ' . $addWordRequest->firstWord;
-                }
+        $listOfWords = array();
+        foreach ($addWordRequest->words as $word) {
+            $candidate = strtolower(filter_var($word, FILTER_SANITIZE_STRING));
+            $errorMessage = $this->validateWord($candidate);
+            if (!empty($errorMessage)) {
+                return $errorMessage;
             }
-        } else if (empty($wordWithSynonymArray)) {
-            $newWordId = $this->synonymsDao->insertWord($addWordRequest->firstWord);
-            if ($newWordId) {
-                if (!$this->synonymsDao->insertSynonym($addWordRequest->secondWord, $newWordId)) {
-                    return 'Failed to insert synonym for ' . $addWordRequest->secondWord;
-                }
-                return "Added two words";
-            }
-            return 'Failed to insert word for ' . $addWordRequest->firstWord;
+            $listOfWords[] = $candidate;
         }
 
-        return 'Something went terrible wrong';   
-    }
+        $this->synonymsService->addSynonyms($listOfWords);
 
-    private function validateRequest($request) 
-    {
-        $errorMessage = array();
-
-        if ($request->firstWord === $request->secondWord) {
-            $errorMessage[] = 'First word same as second word';
-        }
-
-        if ($request->firstWord == '') {
-            $errorMessage[] = 'First word missing';
-        }
-
-        if ($request->secondWord == '') {
-            $errorMessage[] = 'Second word missing';
-        }
-
-        preg_match('/[^a-zA-Z]/', $request->firstWord) == true ? $errorMessage[] = 'First word contains non letters' : null;
-        preg_match('/[^a-zA-Z]/', $request->secondWord) == true ? $errorMessage[] = 'Second word contains non letters' : null;
-
-        return implode('. ', $errorMessage);
     }
 }

@@ -1,13 +1,8 @@
 <?php
 namespace Thesaurus\Datamodels;
 
-class Word
+class WordWithoutId
 {
-
-    /**
-     * @var int
-     */
-    public int $id;
 
     /**
      * @var string
@@ -16,12 +11,10 @@ class Word
 
     /**
      * @param array $row
-     * @return Word
+     * @return WordWithoutId
      */
-    public static function withDbRow(array $row)
-    {
-        $obj        = new self();
-        $obj->id    = $row['id'];
+    public static function withDbRow(array $row) {
+        $obj = new self();
         $obj->value = $row['value'];
 
         return $obj;

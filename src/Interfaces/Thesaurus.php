@@ -1,12 +1,12 @@
 <?php
+namespace Thesaurus\Interfaces;
 
-namespace Src\Interfaces;
+interface Thesaurus
+{
 
-interface Thesaurus {
-    
-    public function addSynonyms($synonyms);
+    public function addSynonyms($synonyms): void;
 
-    public function getSynonyms($word);
+    public function getSynonyms($word): array;
 
-    public function getWords();
+    public function getWords(): array;
 }

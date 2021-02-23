@@ -1,67 +1,66 @@
 <?php
+namespace Thesaurus\Dao;
 
-namespace Src\Dao;
+use Exception;
+use Thesaurus\Database\Db;
+use Thesaurus\Database\DbStatementHelper;
+use Thesaurus\Datamodels\Synonym;
+use Thesaurus\Datamodels\Word;
+use Thesaurus\Datamodels\WordWithoutId;
 
-use Src\Database\Db;
-use Src\Database\DbStatementHelper;
-use Src\Datamodels\Synonym;
-use Src\Datamodels\Word;
-use Src\Datamodels\WordWithSynonym;
+class SynonymsDao
+{
 
-class SynonymsDao {
+    /** @var Db */
+    private Db $db;
 
-    private $db;
-
-    public function __construct()
+    public function __construct(Db $db)
     {
-        $this->db = new Db('db', 'thesaurus', 'root', 'root', 3306);
+        $this->db = $db;
     }
 
+    /**
+     * @return WordWithoutId[]
+     * @throws Exception
+     */
     public function getWords() 
     {
         $helper = new DbStatementHelper($this->db);
         $query = "SELECT word.value " .
                  "FROM word UNION SELECT " .
-                 "synonyms.value " .
-                 "FROM synonyms;";
+                 "synonym.value " .
+                 "FROM synonym;";
         $rows = $helper->selectAll($query);
 
         $words = array();
         foreach ($rows as $row) {
-            $words[] = Word::withDbRow($row);
+            $words[] = WordWithoutId::withDbRow($row);
         }
 
         return $words;
     }
 
-    public function wordHasSynonym($firstWord, $secondWord) {
+    /**
+     * @param string $word
+     * @param int $id
+     * @return bool|int
+     * @throws Exception
+     */
+    public function insertSynonym(string $word, int $id)
+    {
         $helper = new DbStatementHelper($this->db);
-        $query = "SELECT word.id, word.value, 'word' AS from_table " .
-                 "FROM word " . 
-                 "WHERE word.value = ? OR word.value = ? " .
-                 "UNION SELECT " . 
-                 "synonyms.word_id, synonyms.value, " .
-                 "'synonyms' AS from_table " . 
-                 "FROM synonyms WHERE " .
-                 "synonyms.value = ? OR synonyms.value = ?";
-        $rows = $helper->selectAllByParams($query, [$firstWord, $secondWord, $firstWord, $secondWord]);
-
-        $wordWithSynonym = array();
-        foreach ($rows as $row) {
-            $wordWithSynonym[] = WordWithSynonym::withDbRow($row);
-        }
-
-        return $wordWithSynonym;
-    }
-
-    public function insertSynonym($word, $id) {
-        $helper = new DbStatementHelper($this->db);
-        $query = "INSERT INTO synonyms (word_id, value) " . 
+        $query = "INSERT INTO synonym (word_id, value) " .
                  "VALUES (?, ?)";
         return $helper->insert($query, array($id, $word));
     }
 
-    public function insertWord($word) {
+    /**
+     * @param string $word
+     * @return bool|int
+     * @throws Exception
+     */
+    public function insertWord(string $word)
+    {
         $helper = new DbStatementHelper($this->db);
         $query = "INSERT INTO word (value) " . 
                  "VALUES (?)";
@@ -70,22 +69,33 @@ class SynonymsDao {
         return $id;
     }
 
-    public function getWordByValue($value) {
+    /**
+     * @param string $value
+     * @return bool|Word
+     * @throws Exception
+     */
+    public function getWordByValue(string $value)
+    {
         $helper = new DbStatementHelper($this->db);
         $query = "SELECT * FROM word WHERE value = :value";
         $row = $helper->selectByValue($query, $value);
 
         if ($row) {
-            
             return Word::withDbRow($row);
         }
 
         return false;
     }
 
-    public function getSynonymByValue($value) {
+    /**
+     * @param string $value
+     * @return bool|Synonym
+     * @throws Exception
+     */
+    public function getSynonymByValue(string $value)
+    {
         $helper = new DbStatementHelper($this->db);
-        $query = "SELECT * FROM synonyms WHERE value = :value";
+        $query = "SELECT * FROM synonym WHERE value = :value";
         $row = $helper->selectByValue($query, $value);
 
         if ($row) {
@@ -95,9 +105,15 @@ class SynonymsDao {
         return false;
     }
 
-    public function getAllSynonymsByWordId($id) {
+    /**
+     * @param int $id
+     * @return Synonym[]
+     * @throws Exception
+     */
+    public function getAllSynonymsByWordId(int $id)
+    {
         $helper = new DbStatementHelper($this->db);
-        $query = "SELECT * FROM synonyms WHERE word_id = ?";
+        $query = "SELECT * FROM synonym WHERE word_id = ?";
         $rows = $helper->selectAllByParams($query, array($id));
 
         $synonyms = array();
@@ -108,7 +124,13 @@ class SynonymsDao {
         return $synonyms;
     }
 
-    public function getWordById($id) {
+    /**
+     * @param int $id
+     * @return bool|Word
+     * @throws Exception
+     */
+    public function getWordById(int $id)
+    {
         $helper = new DbStatementHelper($this->db);
         $query = "SELECT * FROM word WHERE id = :id";
         $row = $helper->selectById($query, $id);
@@ -118,18 +140,5 @@ class SynonymsDao {
         }
 
         return false;
-    }
-
-    public function getAllSynonymsById($id) {
-        $helper = new DbStatementHelper($this->db);
-        $query = "SELECT * FROM synonyms WHERE id = ?";
-        $rows = $helper->selectAllByParams($query, array($id));
-
-        $synonyms = array();
-        foreach ($rows as $row) {
-            $synonyms[] = Synonym::withDbRow($row);
-        }
-
-        return $synonyms;
     }
 }

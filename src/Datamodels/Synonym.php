@@ -1,16 +1,30 @@
 <?php
+namespace Thesaurus\Datamodels;
 
-namespace Src\Datamodels;
+class Synonym
+{
 
-class Synonym {
+    /**
+     * @var int
+     */
+    public int $id;
 
-    public $id;
+    /**
+     * @var int
+     */
+    public int $wordId;
 
-    public $wordId;
+    /**
+     * @var string
+     */
+    public string $value;
 
-    public $value;
-
-    public static function withDbRow($row) {
+    /**
+     * @param array $row
+     * @return Synonym
+     */
+    public static function withDbRow(array $row)
+    {
         $obj = new self();
         $obj->id = $row['id'];
         $obj->wordId = $row['word_id'];
